@@ -1,14 +1,12 @@
-import time
-
 import pulp
 from collections import defaultdict
-from Controllers import rightClickSpot
+
+from pulp import PULP_CBC_CMD
+
 
 def calculateProbabilities(board, maxSolutions):
     rows, cols = len(board), len(board[0])
-
     problem = pulp.LpProblem("MinesweeperSolver", pulp.LpMinimize)
-
     variables = {}
     for row in range(rows):
         for col in range(cols):
@@ -38,23 +36,17 @@ def calculateProbabilities(board, maxSolutions):
 
             # The number of 1s among neighbors must be equal to the tile's number
             constraint = pulp.lpSum([variables[pos] for pos in unknowns]) == tile.value
-            print(constraint)
             problem += constraint
 
     # Actual Solve
     validSolutions = []
 
     for _ in range(maxSolutions):
-        print(f"Iteration {_} / {maxSolutions}")
-        status = problem.solve()
+        print(f"Iteration {_ + 1} / {maxSolutions}")
+        status = problem.solve(PULP_CBC_CMD(msg=False))
         # No more solutions
         if status != pulp.LpStatusOptimal:
             break
-
-        # for pos, var in variables.items():
-        #     print(f"Pos: {pos} | Var: {var} | Var's Value: {pulp.value(var)}")
-        #
-        # exit()
 
         currentSolution = {pos: int(pulp.value(var)) for pos, var in variables.items()}
         validSolutions.append(currentSolution)
@@ -76,8 +68,3 @@ def calculateProbabilities(board, maxSolutions):
     probabilities = {pos: mineCounts[pos] / total for pos in variables}
 
     return probabilities
-
-    # print(f"Found {total} valid mine configurations.")
-    # for pos, prob in probabilities.items():
-    #     print(f"Tile {pos} has a {prob:.2%} chance of being a mine")
-    #     print(f"0 = {prob == 0} | 100 = {prob == 100} | Real Prob = {prob}")

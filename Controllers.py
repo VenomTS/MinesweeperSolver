@@ -1,5 +1,5 @@
 from pynput.mouse import Controller as MController, Button
-from pynput.keyboard import Controller as KController, Key, Listener
+from pynput.keyboard import Controller as KController, Listener
 
 MOUSE = MController()
 KEYBOARD = KController()
@@ -15,7 +15,6 @@ def openSpot(spot):
 
 def flagSpot(board, spot):
     MOUSE.position = spot.position
-    # if clickIt:
     MOUSE.click(RIGHT_CLICK)
     spot.updateNeighborsFlag(board)
     spot.value = -1
@@ -27,6 +26,10 @@ def rightClickSpot(spot):
 def rightClickPosition(position):
     MOUSE.position = position
     MOUSE.click(RIGHT_CLICK)
+
+def leftClickPosition(position):
+    MOUSE.position = position
+    MOUSE.click(LEFT_CLICK)
 
 def getMousePosition():
     return MOUSE.position

@@ -1,5 +1,7 @@
+import random
+
 from PIL import ImageGrab
-from Controllers import waitForKey, getMousePosition, openSpot, flagSpot
+from Controllers import waitForKey, getMousePosition, openSpot, flagSpot, leftClickPosition
 from Spot import Spot
 from time import sleep
 from Solver import makeStep
@@ -14,7 +16,7 @@ TOP_LEFT = None
 BOTTOM_RIGHT = None
 RESTART = None
 
-MAX_LP_SOLUTIONS = 1024
+MAX_LP_SOLUTIONS = 128
 
 def takeScreenshot():
     # resetMousePosition()
@@ -59,43 +61,28 @@ def generateBoard(xOffset, yOffset):
     return board
 
 def getValueFromPixel(pixel):
-    # Have to add 255 as last parameter
-    # None = (255, 255, 255) (Closed)
-    # Flagged = (255, 255, 0)
-    # 0 = (192, 192, 192)
-    # 1 = (0, 0, 255)
-    # 2 = (0, 128, 0)
-    # 3 = (255, 0, 0)
-    # 4 = (0, 0, 128)
-    # 5 = (128, 0, 0)
-    # 6 = (0, 128, 128)
-    # 7 = (0, 0, 0)
-    # 8 = (128, 128, 128)
-    #
-    # DEAD = (255, 0, 0)
-    # ALIVE = (255, 255, 0)
-    # WON = (0, 128, 0)
-    if pixel == (255, 255, 255, 255):
+    pixel = (pixel[0], pixel[1], pixel[2])
+    if pixel == (255, 255, 255):
         return None
-    elif pixel == (255, 255, 0, 255):
+    elif pixel == (255, 255, 0):
         return -1
-    elif pixel == (192, 192, 192, 255):
+    elif pixel == (192, 192, 192):
         return 0
-    elif pixel == (0, 0, 255, 255):
+    elif pixel == (0, 0, 255):
         return 1
-    elif pixel == (0, 128, 0, 255):
+    elif pixel == (0, 128, 0):
         return 2
-    elif pixel == (255, 0, 0, 255):
+    elif pixel == (255, 0, 0):
         return 3
-    elif pixel == (0, 0, 128, 255):
+    elif pixel == (0, 0, 128):
         return 4
-    elif pixel == (128, 0, 0, 255):
+    elif pixel == (128, 0, 0):
         return 5
-    elif pixel == (0, 128, 128, 255):
+    elif pixel == (0, 128, 128):
         return 6
-    elif pixel == (0, 0, 0, 255):
+    elif pixel == (0, 0, 0):
         return 7
-    elif pixel == (255, 255, 255, 255):
+    elif pixel == (255, 255, 255):
         return 8
     exit("Error: INVALID COLOR!")
 
@@ -114,43 +101,61 @@ def isGameFinished():
 
     image = takeScreenshot()
     pixel = image.getpixel(RESTART)
-    return pixel == (255, 0, 0, 255) or pixel == (0, 128, 0, 255)
+    pixel = (pixel[0], pixel[1], pixel[2])
+    return pixel == (255, 0, 0) or pixel == (0, 128, 0)
 
 def markLPSolverDetections(board, probabilities):
+    lowestProb, lowestPos = 1, None
+    hasBestCase = False
     for pos, prob in probabilities.items():
+        if prob < lowestProb:
+            lowestProb = prob
+            lowestPos = pos
         if prob not in [0, 1]:
             continue
-
+        hasBestCase = True
         row, col = pos
         tile = board[row][col]
         if prob == 0:
             openSpot(tile)
         else:
             flagSpot(board, tile)
+    if not hasBestCase:
+        try:
+            print(f"No best case found! Opening a spot with {lowestProb} probability of being a bomb")
+            row, col = lowestPos
+            tile = board[row][col]
+            openSpot(tile)
+        except:
+            openRandomSpot(board)
+
+def restartGame():
+    global RESTART
+    leftClickPosition(RESTART)
+
+def openRandomSpot(board):
+    n, m = len(board), len(board[0])
+    row, col = random.randrange(n), random.randrange(m)
+    while board[row][col].value is not None:
+        row, col = random.randrange(m), random.randrange(m)
+
+    openSpot(board[row][col])
 
 def main():
     xOffset, yOffset = setupArea()
-    board = generateBoard(xOffset, yOffset)
 
-    while not isGameFinished():
-        scanBoard(board)
-        isImproved = makeStep(board)
-        if not isImproved:
-            probabilities = calculateProbabilities(board, MAX_LP_SOLUTIONS)
-            markLPSolverDetections(board, probabilities)
+    while True:
+        board = generateBoard(xOffset, yOffset)
 
-def printBoard(board):
-    for row in board:
-        for item in row:
-            value = item.value
-            if value is None:
-                print("X", end=" ")
-            elif value == -1:
-                print("B", end=" ")
-            else:
-                print(value, end=" ")
-        print()
-    exit()
+        while not isGameFinished():
+            scanBoard(board)
+            isImproved = makeStep(board)
+            if not isImproved:
+                probabilities = calculateProbabilities(board, MAX_LP_SOLUTIONS)
+                markLPSolverDetections(board, probabilities)
+        print("Game Finished! Waiting for input")
+        waitForKey()
+        restartGame()
 
 if __name__ == "__main__":
     main()
