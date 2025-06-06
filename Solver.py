@@ -1,4 +1,5 @@
-from Controllers import flagSpot, openSpot
+from Controllers import flagSpot, openSpot, rightClickSpot
+from copy import deepcopy
 
 def makeStep(board):
     rows, cols = len(board), len(board[0])
@@ -57,3 +58,59 @@ def flagAllNeighbors(board, rows, cols):
                     isImproved = True
     return isImproved
 
+def calculateFoundBombCount(board):
+    count = 0
+    for row in board:
+        for item in row:
+            if item.value is None:
+                continue
+            if item.value == -1:
+                count += 1
+    return count
+
+def isBoardSatisfied(board):
+    for row in board:
+        for item in row:
+            if item.value is None:
+                continue
+            # If we find a spot that still has bombs, well, we must search still
+            if item.value >= 1:
+                return False
+    return True
+
+def recursiveMineFinder(board, edges, placeableMines):
+    if isBoardSatisfied(board):
+        return True
+
+    if placeableMines == 0:
+        return False
+
+    for i in range(len(edges)):
+        currEdge = edges[i]
+        if not currEdge.canSpotBeBomb(board):
+            continue
+        currEdge.updateNeighborsFlag(board)
+        if recursiveMineFinder(board, edges[i + 1:], placeableMines - 1):
+            currEdge.recursiveMineCount += 1
+        currEdge.updateNeighborsUnflag(board)
+
+    return False
+
+
+def calculateOddsPerSpot(board, minesTotal):
+    edges = []
+    for row in board:
+        for item in row:
+            item.recursiveMineCount = 0
+            if item.isEdge(board):
+                edges.append(item)
+                rightClickSpot(item)
+
+    placeableMines = minesTotal - calculateFoundBombCount(board)
+
+    recursiveMineFinder(board, edges, placeableMines)
+    for row in board:
+        for item in row:
+            print(item.recursiveMineCount, end=' ')
+        print()
+    exit()

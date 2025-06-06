@@ -17,9 +17,13 @@ def openSpot(board, spot):
 
 def flagSpot(board, spot):
     MOUSE.position = spot.position
-    MOUSE.click(RIGHT_CLICK)
+    # MOUSE.click(RIGHT_CLICK)
     spot.updateNeighborsFlag(board)
     spot.value = -1
+
+def rightClickSpot(spot):
+    MOUSE.position = spot.position
+    MOUSE.click(RIGHT_CLICK)
 
 def getMousePosition():
     return MOUSE.position

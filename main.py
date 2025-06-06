@@ -1,15 +1,14 @@
 from PIL import ImageGrab
-from Controllers import waitForKey, getMousePosition, resetMousePosition, setMousePosition
+from Controllers import waitForKey, getMousePosition
 from Spot import Spot
 from time import sleep
-from Solver import makeStep
-import numpy as np
+from Solver import makeStep, calculateOddsPerSpot
 
-EASY = [8, 8]
-MID = [16, 16]
-HARD = [16, 30]
+EASY = [8, 8, 10]
+MID = [16, 16, 40]
+HARD = [16, 30, 99]
 
-ROWS, COLS = MID
+ROWS, COLS, BOMBS = HARD
 TOP_LEFT = None
 BOTTOM_RIGHT = None
 RESTART = None
@@ -35,6 +34,9 @@ def setupArea():
             RESTART = getMousePosition()
             print("Restart Position Set")
             sleep(1)
+
+    # print(f"TOP_LEFT = {TOP_LEFT}\nBOTTOM_RIGHT = {BOTTOM_RIGHT}\nRESTART = {RESTART}")
+    # exit()
 
     xOffset = (BOTTOM_RIGHT[0] - TOP_LEFT[0]) / (COLS - 1)
     yOffset = (BOTTOM_RIGHT[1] - TOP_LEFT[1]) / (ROWS - 1)
@@ -115,26 +117,25 @@ def main():
     xOffset, yOffset = setupArea()
     board = generateBoard(xOffset, yOffset)
 
-    isImproved = True
-
-    while isImproved and not isGameFinished():
+    while not isGameFinished():
         scanBoard(board)
         isImproved = makeStep(board)
+        if not isImproved:
+            print("Started Doing Recursion")
+            calculateOddsPerSpot(board, BOMBS)
 
-def saveBoard(board):
+def printBoard(board):
     for row in board:
-        for spot in row:
-            if spot.value is None:
-                print("_", end=" ")
-            elif spot.value == -1:
+        for item in row:
+            value = item.value
+            if value is None:
                 print("X", end=" ")
+            elif value == -1:
+                print("B", end=" ")
             else:
-                print(spot.value, end=" ")
+                print(value, end=" ")
         print()
-    waitForKey()
+    exit()
 
 if __name__ == "__main__":
-    image = ImageGrab.grab()
-    myArr = np.array(image)
-    print(myArr)
-    # main()
+    main()
