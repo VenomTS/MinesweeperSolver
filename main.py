@@ -1,8 +1,9 @@
 from PIL import ImageGrab
-from Controllers import waitForKey, getMousePosition
+from Controllers import waitForKey, getMousePosition, openSpot, flagSpot
 from Spot import Spot
 from time import sleep
-from Solver import makeStep, calculateOddsPerSpot
+from Solver import makeStep
+from LPSolver import calculateProbabilities
 
 EASY = [8, 8, 10]
 MID = [16, 16, 40]
@@ -12,6 +13,8 @@ ROWS, COLS, BOMBS = HARD
 TOP_LEFT = None
 BOTTOM_RIGHT = None
 RESTART = None
+
+MAX_LP_SOLUTIONS = 1024
 
 def takeScreenshot():
     # resetMousePosition()
@@ -113,6 +116,18 @@ def isGameFinished():
     pixel = image.getpixel(RESTART)
     return pixel == (255, 0, 0, 255) or pixel == (0, 128, 0, 255)
 
+def markLPSolverDetections(board, probabilities):
+    for pos, prob in probabilities.items():
+        if prob not in [0, 1]:
+            continue
+
+        row, col = pos
+        tile = board[row][col]
+        if prob == 0:
+            openSpot(tile)
+        else:
+            flagSpot(board, tile)
+
 def main():
     xOffset, yOffset = setupArea()
     board = generateBoard(xOffset, yOffset)
@@ -121,8 +136,8 @@ def main():
         scanBoard(board)
         isImproved = makeStep(board)
         if not isImproved:
-            print("Started Doing Recursion")
-            calculateOddsPerSpot(board, BOMBS)
+            probabilities = calculateProbabilities(board, MAX_LP_SOLUTIONS)
+            markLPSolverDetections(board, probabilities)
 
 def printBoard(board):
     for row in board:
